@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title> Пропускная система</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1> Пропускная система</h1>
+        <a href="/logout" class="logout">Выход</a>
+    </header>
+
+    <!-- Последняя попытка -->
+    {% if current.user_id %}
+    <div class="card status {{ 'success' if current.status == 'success' else 'fail' }}">
+        <h3>Последняя проверка</h3>
+        <p>ID: <strong>{{ current.user_id }}</strong></p>
+        <p>Статус: 
+            <span class="{{ 'green' if current.status == 'success' else 'red' }}">
+                {{ ' Успешно' if current.status == 'success' else ' Отказ' }}
+            </span>
+        </p>
+        <p>Время: {{ current.timestamp }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Журнал -->
+    <h2>Журнал доступа</h2>
+    <table>
+        <tr><th>ID</th><th>Статус</th><th>Время</th></tr>
+        {% for log in logs %}
+        <tr class="{{ 'success' if log.status == 'success' else 'fail' }}">
+            <td>{{ log.user_id }}</td>
+            <td>{{ '' if log.status == 'success' else '' }}</td>
+            <td>{{ log.timestamp }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">Нет записей</td></tr>
+        {% endfor %}
+    </table>
+</div>
+</body>
+</html>

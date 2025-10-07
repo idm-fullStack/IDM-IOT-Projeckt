@@ -1,0 +1,11 @@
+pip install -r requirements.txt
+
+cd server
+python app.py
+
+Заход на сайт
+Откройте: http://localhost:5000/login
+Логин: admin
+Пароль: admin123
+
+

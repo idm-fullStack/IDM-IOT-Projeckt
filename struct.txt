@@ -1,0 +1,18 @@
+access_control_system/
+│
+├── esp32_code/               # Код для ESP32
+│   └── esp32_camera_finger.ino
+│
+├── server/
+│   ├── app.py                # Основной сервер с авторизацией
+│   ├── database.db           # Создастся автоматически
+│   ├── registered_faces/     # Фото пользователей
+│   ├── templates/
+│   │   ├── login.html
+│   │   └── index.html
+│   ├── static/
+│   │   └── style.css
+│   └── utils/
+│       └── face_utils.py
+│
+└── requirements.txt

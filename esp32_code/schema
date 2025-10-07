@@ -1,0 +1,32 @@
+[ R503 ]
+   TX  → [10kΩ] → ESP32 GPIO 16
+   RX  → ESP32 GPIO 17
+   VCC → ESP32 5V
+   GND → ESP32 GND
+
+[ RGB LED ] (общий катод)
+   R   → [220Ω] → ESP32 GPIO 4
+   G   → [220Ω] → ESP32 GPIO 15
+   B   → [220Ω] → ESP32 GPIO 2
+   (-) → ESP32 GND
+
+[ Питание ]
+   5V  → ESP32 5V
+   GND → ESP32 GND
+   [+] → Конденсатор 100 мкФ → [-]
+
+
+
+
+
+   R503 VCC    → ESP32 5V
+R503 GND    → ESP32 GND
+R503 TX     → [10kΩ] → ESP32 GPIO 16
+R503 RX     → ESP32 GPIO 17
+
+LED Red     → [220Ω] → ESP32 GPIO 4
+LED Green   → [220Ω] → ESP32 GPIO 15
+LED Blue    → [220Ω] → ESP32 GPIO 2
+LED катод   → ESP32 GND
+
+(Конденсатор: 5V ↔ GND)

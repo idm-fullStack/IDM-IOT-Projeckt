@@ -1,0 +1,102 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f2f4f8;
+    margin: 0;
+    padding: 20px;
+}
+
+.container, .login-container {
+    max-width: 900px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.logout {
+    color: #e74c3c;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.card {
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.status.success { border-left: 6px solid #2ecc71; }
+.status.fail { border-left: 6px solid #e74c3c; }
+
+.green { color: #2ecc71; }
+.red { color: #e74c3c; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f0f0f0;
+    font-weight: 600;
+}
+
+.success { color: #2ecc71; }
+.fail { color: #e74c3c; }
+
+/* Логин */
+.login-container {
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.login-container button {
+    background: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+}
+
+.login-container button:hover {
+    background: #2980b9;
+}
+
+.error {
+    color: #e74c3c;
+    margin-bottom: 10px;
+}
