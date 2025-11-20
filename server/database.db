@@ -1,0 +1,73 @@
+
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+
+DATABASE = 'database.db'
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row  # позволяет обращаться к колонкам по имени
+    return conn
+
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Таблица пользователей
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            login TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            photo_path TEXT,
+            fingerprint_template BLOB,
+            face_encoding BLOB,
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Таблица логов
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            status TEXT,
+            timestamp TEXT
+        )
+    ''')
+
+    # Создаём админа по умолчанию
+    cursor.execute("SELECT * FROM users WHERE login = ?", ("admin",))
+    if cursor.fetchone() is None:
+        pwd_hash = generate_password_hash("admin123")
+        cursor.execute(
+            "INSERT INTO users (user_id, name, login, password_hash) VALUES (?, ?, ?, ?)",
+            ("admin", "Администратор", "admin", pwd_hash)
+        )
+
+    conn.commit()
+    conn.close()
+
+def get_user_by_login(login):
+    conn = get_db()
+    user = conn.execute("SELECT * FROM users WHERE login = ?", (login,)).fetchone()
+    conn.close()
+    return user
+
+def register_user(user_id, name, login, password):
+    conn = get_db()
+    try:
+        pwd_hash = generate_password_hash(password)
+        conn.execute(
+            '''INSERT INTO users (user_id, name, login, password_hash) 
+               VALUES (?, ?, ?, ?)''',
+            (user_id, name, login, pwd_hash)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False  # Логин или user_id уже заняты
+    finally:
+        conn.close()
