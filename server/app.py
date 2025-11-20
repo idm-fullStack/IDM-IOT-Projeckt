@@ -9,50 +9,60 @@ import os
 import numpy as np
 from datetime import datetime
 from utils.face_utils import get_face_encoding, compare_faces
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Change in production!
-
+app.secret_key = 'supersecretkey'  
 # === Настройки ===
-ADMIN_LOGIN = "admin"
-ADMIN_PASS = "admin123"
 os.makedirs("registered_faces", exist_ok=True)
 
 # === Инициализация БД ===
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
+    # Таблица пользователей: теперь с login и password_hash
     c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        login TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
         photo_path TEXT,
         fingerprint_template BLOB,
         face_encoding BLOB,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    # Таблица логов
     c.execute('''CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT,
         status TEXT,
         timestamp TEXT
     )''')
+    # Создаём админа по умолчанию (если его нет)
+    admin_login = "admin"
+    c.execute("SELECT * FROM users WHERE login=?", (admin_login,))
+    if c.fetchone() is None:
+        pwd_hash = generate_password_hash("admin123")
+        c.execute(
+            "INSERT INTO users (user_id, name, login, password_hash) VALUES (?, ?, ?, ?)",
+            ("admin", "Администратор", admin_login, pwd_hash)
+        )
     conn.commit()
     conn.close()
 
 init_db()
 
 # === Глобальные переменные ===
-logs = []
-templates_db = {}  # id -> bytes (fingerprint template)
 current_attempt = {"user_id": None, "status": None, "timestamp": None}
 
 # === MQTT клиент ===
 def on_connect(client, userdata, flags, rc):
-    print(" MQTT подключён")
+    print("MQTT подключён")
     client.subscribe("auth/attempts")
 
 def on_message(client, userdata, msg):
-    global current_attempt, logs
+    global current_attempt
 
     if msg.topic == "auth/attempts":
         try:
@@ -62,14 +72,15 @@ def on_message(client, userdata, msg):
             photo_data = base64.b64decode(photo_b64)
 
             # Сохраняем фото временно
-            with open(f"registered_faces/{user_id}_latest.jpg", "wb") as f:
+            temp_path = f"registered_faces/{user_id}_latest.jpg"
+            with open(temp_path, "wb") as f:
                 f.write(photo_data)
 
-            # Получаем эталонное лицо из БД
+            # Проверяем, зарегистрирован ли пользователь
             conn = sqlite3.connect('database.db')
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
-            c.execute("SELECT face_encoding FROM users WHERE id=?", (user_id,))
+            c.execute("SELECT face_encoding FROM users WHERE user_id = ?", (user_id,))
             row = c.fetchone()
             conn.close()
 
@@ -93,7 +104,7 @@ def on_message(client, userdata, msg):
             log_and_publish(client, "unknown", "failed", "Ошибка обработки")
 
 def log_and_publish(client, user_id, status, reason=""):
-    global current_attempt, logs
+    global current_attempt
     now = datetime.now().strftime("%H:%M:%S")
     current_attempt = {"user_id": user_id, "status": status, "timestamp": now}
 
@@ -106,7 +117,7 @@ def log_and_publish(client, user_id, status, reason=""):
 
     # Отправляем ответ
     client.publish("auth/response", "success" if status == "success" else "failed")
-    print(f" {user_id}: {status.upper()} — {reason}")
+    print(f"{user_id}: {status.upper()} — {reason}")
 
 mqtt_client = mqtt.Client()
 mqtt_client.on_connect = on_connect
@@ -119,15 +130,65 @@ def start_mqtt():
 threading.Thread(target=start_mqtt, daemon=True).start()
 
 # === Маршруты ===
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        if request.form['username'] == ADMIN_LOGIN and request.form['password'] == ADMIN_PASS:
+        login_input = request.form['login']
+        password = request.form['password']
+
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM users WHERE login = ?", (login_input,))
+        user = c.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password_hash'], password):
             session['logged_in'] = True
+            session['username'] = user['name']
+            session['user_id'] = user['user_id']
             return redirect(url_for('index'))
         else:
-            return render_template('login.html', error="Неверный логин или пароль")
-    return render_template('login.html')
+            error = "Неверный логин или пароль"
+
+    # Передаём флаг авторизации, чтобы показать кнопку выхода
+    return render_template('login.html', error=error, session_logged_in=session.get('logged_in'))
+
+@app.route('/register', methods=['POST'])
+def register():
+    name = request.form['name']
+    login_input = request.form['login']
+    password = request.form['password']
+
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    # Проверка на уникальность
+    c.execute("SELECT * FROM users WHERE login = ? OR user_id = ?", (login_input, login_input))
+    if c.fetchone() is not None:
+        conn.close()
+        return render_template('login.html', error="Логин или ID уже заняты", session_logged_in=session.get('logged_in'))
+
+    # Хэшируем пароль
+    pwd_hash = generate_password_hash(password)
+    user_id = login_input.lower()  # например, использовать логин как user_id
+
+    c.execute(
+        '''INSERT INTO users (user_id, name, login, password_hash) 
+           VALUES (?, ?, ?, ?)''',
+        (user_id, name, login_input, pwd_hash)
+    )
+    conn.commit()
+    conn.close()
+
+    # Автоматически логиним после регистрации
+    session['logged_in'] = True
+    session['username'] = name
+    session['user_id'] = user_id
+    return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
