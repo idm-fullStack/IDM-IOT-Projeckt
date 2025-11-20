@@ -100,3 +100,16 @@ th {
     color: #e74c3c;
     margin-bottom: 10px;
 }
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    color: #888;
+}
+.divider span {
+    background: #f4f4f4;
+    padding: 0 10px;
+}
+.error {
+    color: red;
+    font-size: 0.9em;
+}
